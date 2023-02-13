@@ -1,0 +1,100 @@
+stages:
+  - test
+  - build
+  - deploy
+
+services:
+  - postgres:14-bullseye
+
+variables:
+  DATABASE_URL: postgres://travel_two_database_ewht_user:HZYVxpR9mZrkiPuEADKXkMojr7tHrV1z@dpg-cf1luk02i3mnjclf7fv0-a.oregon-postgres.render.com/travel_two_database_ewht
+
+# Run flake8 to check for code quality
+lint-test-job:
+  image: python:3-bullseye
+  stage: test
+  script:
+    - pip install flake8
+    - flake8 fastapi-traveltwo
+
+# Run the unit tests
+api-unit-test-job:
+  image: python:3-bullseye
+  stage: test
+  needs:
+    - lint-test-job
+  script:
+    - cd fastapi-traveltwo
+    - pip install -r requirements.txt
+    - python -m pytest
+
+# Build the React/JavaScript front-end
+build-front-end-job:
+  rules:
+    # Only run if pushing to the main branch
+    - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH
+  stage: build
+  image: node:lts-bullseye
+  needs:
+    - lint-test-job
+    - api-unit-test-job
+  variables:
+    # If either of these variables is defined in the GitLab
+    # CI/CD variables, that value will override the value here.
+    # You need to substitute in your real values for
+    # GROUP_NAME, PROJECT_NAME, & WEBSERVICE_NAME below.
+    PUBLIC_URL: https://travel-two.gitlab.io/travel-two
+    REACT_APP_TRAVELSQUARED: https://travel-two.onrender.com
+  script:
+    - cd ghi
+    - npm install
+    - npm run build
+    - cp build/index.html build/404.html
+  artifacts:
+    paths:
+      - ghi/build/
+
+build-back-end-job:
+  rules:
+    # Only run if pushing to the main branch
+    - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH
+  stage: build
+  image: docker:20.10.16
+  services:
+    - docker:20.10.16-dind
+  script:
+    # DO THIS FOR EACH SERVICE YOU NEED TO BUILD A DOCKER
+    # IMAGE FOR
+    - cd fastapi-traveltwo
+
+    # Builds the image CHANGE THE /app FOR EACH SERVICE
+    - docker build -t ${CI_REGISTRY_IMAGE}/fastapi-service:latest .
+
+    # Gives the image a specific name
+    - docker tag ${CI_REGISTRY_IMAGE}/fastapi-service:latest ${CI_REGISTRY_IMAGE}/fastapi-service:$CI_JOB_ID
+
+    # Authenticates with the GitLab image registry
+    - docker login -u gitlab-ci-token -p $CI_BUILD_TOKEN $CI_REGISTRY
+
+    # Stores your image in the GitLab image registry
+    # with two different tags, the version from the tag
+    # and the name "latest"
+    - docker push ${CI_REGISTRY_IMAGE}/fastapi-service:$CI_JOB_ID
+    - docker push ${CI_REGISTRY_IMAGE}/fastapi-service:latest
+
+
+
+# Deploy the React/JavaScript front-end to GitLab pages
+pages:
+  stage: deploy
+  rules:
+    - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH
+  dependencies:
+    - build-front-end-job
+  needs:
+    - build-front-end-job
+  script:
+    - mv ghi/build/ public
+  artifacts:
+    paths:
+      - public

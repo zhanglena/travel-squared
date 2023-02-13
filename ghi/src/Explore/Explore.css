@@ -1,0 +1,20 @@
+.textbox-padding {
+  padding-top: 150px;
+}
+
+.card-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 2em;
+}
+
+.flex-form {
+  border: 0;
+  /* padding: 0 0 0 10px; */
+  background: #fff;
+  line-height: 50px;
+  font-size: 1rem;
+  border-radius: 0;
+  outline: 0;
+  -webkit-appearance: none;
+}

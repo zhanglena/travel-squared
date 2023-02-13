@@ -1,0 +1,66 @@
+volumes:
+  postgres-data:
+    external: true
+  # pg-admin:
+  #   external: true
+services:
+  postgres:
+    container_name: postgres
+    build:
+      context: ./relational-data
+      dockerfile: ./Dockerfile.dev
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+    environment:
+      - POSTGRES_MULTIPLE_DATABASES= travelsquared
+      - POSTGRES_PASSWORD=test-databases
+    ports:
+      - 15432:5432
+
+  # pg-admin:
+  #   container_name: pg-admin
+  #   image: dpage/pgadmin4
+  #   volumes:
+  #     - pg-admin:/var/lib/pgadmin
+  #   ports:
+  #     - 8082:80
+  #   environment:
+  #     PGADMIN_DEFAULT_EMAIL: travelsquared@example.com
+  #     PGADMIN_DEFAULT_PASSWORD: TS2022RDBMS
+  #     PGADMIN_DISABLE_POSTFIX: 1
+
+  travel-squared:
+    container_name: travel-squared
+    build:
+      context: ./fastapi-traveltwo
+      dockerfile: ./Dockerfile.dev
+    ports:
+      - 8000:8000
+    volumes:
+      - ./fastapi-traveltwo:/app
+    environment:
+      SIGNING_KEY: ${SIGNING_KEY}
+      DATABASE_URL: postgresql://travelsquared:password@postgres/travelsquared
+      # DATABASE_URL: postgres://travel_two_database_ewht_user:HZYVxpR9mZrkiPuEADKXkMojr7tHrV1z@dpg-cf1luk02i3mnjclf7fv0-a.oregon-postgres.render.com/travel_two_database_ewht
+      WAIT_HOSTS: postgres:5432
+      WAIT_BEFORE: 5
+      WAIT_TIMEOUT: 60
+
+  ghi:
+    container_name: ghi
+    image: node:lts-bullseye
+    command: npm start
+    working_dir: /app
+    volumes:
+      - ./ghi:/app
+    ports:
+      - "3000:3000"
+    environment:
+      HOST_OS: ${OS}
+      NODE_ENV: development
+      HOST: "0.0.0.0"
+      PUBLIC_URL: http://localhost:3000
+      REACT_APP_TRAVELSQUARED: http://localhost:8000
+      REACT_APP_UPLOADCARE_PUBLIC_KEY: ${UPLOADCARE_PUBLIC_KEY}
+      CHOKIDAR_USEPOLLING: true # create-ui-app <= 5.x
+      WATCHPACK_POLLING: true # create-ui-app >= 5.x
