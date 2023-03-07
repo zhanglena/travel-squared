@@ -1,6 +1,6 @@
 # Travel²
 
-Deployed site: https://travel-two.gitlab.io/travel-two
+Deployed site: https://travel-two.gitlab.io/travel-two/
 
 Note: Authentication system uses a library called JWTDown-FastAPI, which uses cross-site tracking. This is disabled by default on iOS Safari settings. The homepage requires requires querying for token data. With a free plan on Render.com, requests, especially authentication, are very slow. Thus the home page may take a couple of seconds before loading for the first time.
 
